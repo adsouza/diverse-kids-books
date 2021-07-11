@@ -7,9 +7,7 @@ import (
 	"io"
         "log"
         "os"
-	"strings"
 
-	"google.golang.org/api/iterator"
 	"cloud.google.com/go/firestore"
 )
 
@@ -54,46 +52,15 @@ func main() {
 		log.Println(row[0])
 	}
 	fmt.Println("--")
+}
 
-	// Read data from FireStore & print it to console.
-	var (
-		c Creator
-		b Book
-	)
-	creators := fsc.Collection("creators").Documents(ctx)
-	for {
-		cSnap, err := creators.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			log.Fatalf("Failed to iterate over creators: %v", err)
-		}
-		cSnap.DataTo(&c)
-		var titles []string
-		books := fsc.Collection("books").Where("Illustrator", "==", cSnap.Ref).Documents(ctx)
-		for {
-			bSnap, err := books.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				log.Fatalf("Failed to iterate over books for %s: %v", c.Name, err)
-			}
-			bSnap.DataTo(&b)
-			titles = append(titles, b.Title)
-		}
-		fmt.Printf("%s: %s.\n", c.Name, strings.Join(titles, ", "))
-	}
+type Creator struct {
+	Name string
 }
 
 type Book struct {
 	Title string
 	Illustrator *firestore.DocumentRef
-}
-
-type Creator struct {
-	Name string
 }
 
 func createClient(ctx context.Context) *firestore.Client {
