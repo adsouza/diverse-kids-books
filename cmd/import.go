@@ -7,6 +7,7 @@ import (
 	"io"
         "log"
         "os"
+	"strconv"
 	"strings"
 
 	"cloud.google.com/go/firestore"
@@ -38,6 +39,16 @@ func main() {
 		}
 		if len(row[2]) > 0 {
 			b.Illustrators = importCreators(ctx, fsc, row[2])
+		}
+		if len(row[3]) > 0 {
+			if b.MinAge, err = strconv.Atoi(row[3]); err != nil {
+				log.Fatal(err)
+			}
+		}
+		if len(row[4]) > 0 {
+			if b.MaxAge, err = strconv.Atoi(row[4]); err != nil {
+				log.Fatal(err)
+			}
 		}
 		if _, err := fsc.Collection("books").Doc(fmt.Sprintf("%s by %s", b.Title, row[1])).Set(ctx, b); err != nil {
 			log.Fatal(err)
@@ -87,6 +98,7 @@ type Creator struct {
 type Book struct {
 	Title string
 	Authors, Illustrators []*firestore.DocumentRef
+	MinAge, MaxAge int
 }
 
 func createClient(ctx context.Context) *firestore.Client {
