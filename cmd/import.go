@@ -7,6 +7,7 @@ import (
 	"io"
         "log"
         "os"
+	"strings"
 
 	"cloud.google.com/go/firestore"
 )
@@ -31,20 +32,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		// Skip books that lack illustrators.
-		if row[2] == "" {
-			continue
-		}
-		i := Creator{Name: row[2]}
-		iRef := fsc.Collection("creators").Doc(i.Name)
-		if _, err := iRef.Get(ctx); err != nil {
-			if _, err := iRef.Set(ctx, i); err != nil {
-				log.Fatal(err)
-			}
-		}
 		b := Book{
 			Title: row[0],
-			Illustrator: iRef,
+			Authors: importCreators(ctx, fsc, row[1]),
+		}
+		if len(row[2]) > 0 {
+			b.Illustrators = importCreators(ctx, fsc, row[2])
 		}
 		if _, err := fsc.Collection("books").Doc(fmt.Sprintf("%s by %s", b.Title, row[1])).Set(ctx, b); err != nil {
 			log.Fatal(err)
@@ -54,13 +47,29 @@ func main() {
 	fmt.Println("--")
 }
 
+func importCreators(ctx context.Context, fsc *firestore.Client, names string) []*firestore.DocumentRef {
+	var refs []*firestore.DocumentRef
+	creators := strings.Split(names, " &\n")
+	for _, n := range creators {
+		i := Creator{Name: n}
+		ref := fsc.Collection("creators").Doc(n)
+		if _, err := ref.Get(ctx); err != nil {
+			if _, err := ref.Set(ctx, i); err != nil {
+				log.Fatal(err)
+			}
+		}
+		refs = append(refs, ref)
+	}
+	return refs
+}
+
 type Creator struct {
 	Name string
 }
 
 type Book struct {
 	Title string
-	Illustrator *firestore.DocumentRef
+	Authors, Illustrators []*firestore.DocumentRef
 }
 
 func createClient(ctx context.Context) *firestore.Client {
