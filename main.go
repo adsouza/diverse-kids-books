@@ -21,6 +21,7 @@ func main() {
 		b Book
 	)
 	creators := fsc.Collection("creators").Documents(ctx)
+	fmt.Println("Illustrators & their books:\n---------------------------")
 	for {
 		cSnap, err := creators.Next()
 		if err == iterator.Done {
@@ -31,7 +32,7 @@ func main() {
 		}
 		cSnap.DataTo(&c)
 		var titles []string
-		books := fsc.Collection("books").Where("Illustrator", "==", cSnap.Ref).Documents(ctx)
+		books := fsc.Collection("books").Where("Illustrators", "array-contains", cSnap.Ref).Documents(ctx)
 		for {
 			bSnap, err := books.Next()
 			if err == iterator.Done {
@@ -43,7 +44,10 @@ func main() {
 			bSnap.DataTo(&b)
 			titles = append(titles, b.Title)
 		}
-		fmt.Printf("%s: %s.\n", c.Name, strings.Join(titles, ", "))
+		if len(titles) == 0 {
+			continue
+		}
+		fmt.Printf("%s:\n\t%s\n", c.Name, strings.Join(titles, "\n\t"))
 	}
 
 	// Start server.
@@ -60,7 +64,8 @@ func main() {
 
 type Book struct {
 	Title string
-	Illustrator *firestore.DocumentRef
+	Authors, Illustrators []*firestore.DocumentRef
+	MinAge, MaxAge int
 }
 
 type Creator struct {
