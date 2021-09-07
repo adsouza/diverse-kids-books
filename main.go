@@ -17,6 +17,7 @@ func main() {
 	ctx := context.Background()
 	fsc := createClient(ctx)
 	defer fsc.Close()
+	titlesByIllustrator := map[string][]string{}
 	var (
 		c Creator
 		b Book
@@ -34,28 +35,32 @@ func main() {
 			log.Fatalf("Failed to iterate over creators: %v", err)
 		}
 		cSnap.DataTo(&c)
-		var titles []string
-		books := fsc.Collection("books").Where("Illustrators", "array-contains", cSnap.Ref).Where("MinAge", "<=", age).Documents(ctx)
-		for {
-			bSnap, err := books.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				log.Fatalf("Failed to iterate over books for %s: %v", c.Name, err)
-			}
-			bSnap.DataTo(&b)
-			if b.MaxAge < age {
-				// Skip books that would be too simple for the specified age.
-				continue
-			}
-			titles = append(titles, b.Title)
-			n++
+		titlesByIllustrator[c.Name] = []string{}
+	}
+	books := fsc.Collection("books").Where("MinAge", "<=", age).Documents(ctx)
+	for {
+		bSnap, err := books.Next()
+		if err == iterator.Done {
+			break
 		}
+		if err != nil {
+			log.Fatalf("Failed to iterate over books for %s: %v", c.Name, err)
+		}
+		bSnap.DataTo(&b)
+		if b.MaxAge < age {
+			// Skip books that would be too simple for the specified age.
+			continue
+		}
+		for _, i := range b.Illustrators {
+			titlesByIllustrator[i.ID] = append(titlesByIllustrator[i.ID], b.Title)
+		}
+		n++
+	}
+	for c, titles := range titlesByIllustrator {
 		if len(titles) == 0 {
 			continue
 		}
-		fmt.Printf("%s:\n\t%s\n", c.Name, strings.Join(titles, "\n\t"))
+		fmt.Printf("%s:\n\t%s\n", c, strings.Join(titles, "\n\t"))
 	}
 	fmt.Printf("Found a total of %d books.\n", n)
 
@@ -93,6 +98,7 @@ type Book struct {
 
 type Creator struct {
 	Name string
+	books []*Book
 }
 
 func createClient(ctx context.Context) *firestore.Client {
