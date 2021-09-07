@@ -20,6 +20,7 @@ func main() {
 	var (
 		c Creator
 		b Book
+		n int
 	)
 	creators := fsc.Collection("creators").Documents(ctx)
 	age := age()
@@ -49,12 +50,14 @@ func main() {
 				continue
 			}
 			titles = append(titles, b.Title)
+			n++
 		}
 		if len(titles) == 0 {
 			continue
 		}
 		fmt.Printf("%s:\n\t%s\n", c.Name, strings.Join(titles, "\n\t"))
 	}
+	fmt.Printf("Found a total of %d books.\n", n)
 
 	// Start server.
 	port := os.Getenv("PORT")
