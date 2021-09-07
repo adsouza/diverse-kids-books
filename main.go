@@ -6,6 +6,7 @@ import (
         "log"
         "net/http"
         "os"
+	"strconv"
 	"strings"
 
 	"google.golang.org/api/iterator"
@@ -21,6 +22,7 @@ func main() {
 		b Book
 	)
 	creators := fsc.Collection("creators").Documents(ctx)
+	age := age()
 	fmt.Println("Illustrators & their books:\n---------------------------")
 	for {
 		cSnap, err := creators.Next()
@@ -32,7 +34,7 @@ func main() {
 		}
 		cSnap.DataTo(&c)
 		var titles []string
-		books := fsc.Collection("books").Where("Illustrators", "array-contains", cSnap.Ref).Documents(ctx)
+		books := fsc.Collection("books").Where("Illustrators", "array-contains", cSnap.Ref).Where("MinAge", "<=", age).Documents(ctx)
 		for {
 			bSnap, err := books.Next()
 			if err == iterator.Done {
@@ -42,6 +44,10 @@ func main() {
 				log.Fatalf("Failed to iterate over books for %s: %v", c.Name, err)
 			}
 			bSnap.DataTo(&b)
+			if b.MaxAge < age {
+				// Skip books that would be too simple for the specified age.
+				continue
+			}
 			titles = append(titles, b.Title)
 		}
 		if len(titles) == 0 {
@@ -60,6 +66,20 @@ func main() {
         if err := http.ListenAndServe(":"+port, nil); err != nil {
                 log.Fatal(err)
         }
+}
+
+func age() int {
+	const defaultAge = 6
+	if len(os.Args) < 2 {
+		return defaultAge
+	}
+	if age, err := strconv.Atoi(os.Args[1]); err != nil {
+		log.Fatalf("Unable to parse 1st arg as int: %s.", err)
+	} else {
+		log.Printf("Using %d as the target age...\n", age)
+		return age
+	}
+	return defaultAge
 }
 
 type Book struct {
