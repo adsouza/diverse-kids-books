@@ -8,6 +8,7 @@ import (
         "os"
 	"strconv"
 	"strings"
+	"html/template"
 
 	"google.golang.org/api/iterator"
 	"cloud.google.com/go/firestore"
@@ -17,6 +18,8 @@ func main() {
 	ctx := context.Background()
 	fsc := createClient(ctx)
 	defer fsc.Close()
+
+	// Ensure that data can be loaded from Firestore & parsed.
 	titlesByCreator, err := titlesByCreatorForAgeWithTag(ctx, fsc, age(), tag())
 	if err != nil {
 		log.Fatal(err)
@@ -32,6 +35,10 @@ func main() {
 	}
 	fmt.Printf("Found a total of %d books.\n", n)
 
+	// Load HTML templates & configure HTTP request handler.
+	tmpl := template.Must(template.ParseGlob("*.tmpl"))
+	http.Handle("/", &handler{fsc: fsc, tmpl: tmpl})
+
 	// Start server.
 	port := os.Getenv("PORT")
         if port == "" {
@@ -39,9 +46,42 @@ func main() {
                 log.Printf("Defaulting to port %s", port)
         }
         log.Printf("Listening on port %s", port)
-        if err := http.ListenAndServe(":"+port, nil); err != nil {
-                log.Fatal(err)
-        }
+	log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
+type handler struct {
+	fsc *firestore.Client
+	tmpl *template.Template
+}
+
+func (h *handler) respond(w http.ResponseWriter, d *bookList) {
+	if err := h.tmpl.ExecuteTemplate(w, "index.tmpl", d); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, err)
+	}
+}
+
+func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ageStr := r.FormValue("age")
+	if ageStr == "" {
+		h.respond(w, nil)
+		return
+	}
+	age, err := strconv.Atoi(ageStr)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(w, err)
+		return
+	}
+	books := bookList{
+		Age: age,
+	}
+	h.respond(w, &books)
+}
+
+type bookList struct {
+	Age int
+	Titles map[string]titles
 }
 
 type titles struct {
