@@ -50,12 +50,35 @@ func main() {
 				log.Fatal(err)
 			}
 		}
+		if len(row[5]) > 0 {
+			b.Tags = tagsFromAppearance(row[5])
+		}
 		if _, err := fsc.Collection("books").Doc(fmt.Sprintf("%s by %s", b.Title, row[1])).Set(ctx, b); err != nil {
 			log.Fatal(err)
 		}
 		log.Println(row[0])
 	}
 	fmt.Println("--")
+}
+
+func tagsFromAppearance(a string) []string {
+	switch a {
+	case "Asian":
+		return []string{"east-asian"}
+	case "dark":
+		return []string{"melanated"}
+	case "diverse":
+		return []string{"diverse"}
+	case "indigenous":
+		return []string{"indigenous"}
+	case "non-human":
+		return []string{}
+	case "pale":
+		return []string{"pale"}
+	default:
+		log.Printf("Unsupported appearance type: %s.", a)
+	}
+	return nil
 }
 
 func importCreators(ctx context.Context, fsc *firestore.Client, names string) []*firestore.DocumentRef {
@@ -99,6 +122,7 @@ type Book struct {
 	Title string
 	Authors, Illustrators []*firestore.DocumentRef
 	MinAge, MaxAge int
+	Tags []string
 }
 
 func createClient(ctx context.Context) *firestore.Client {
