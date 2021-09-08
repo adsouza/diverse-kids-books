@@ -17,7 +17,7 @@ func main() {
 	ctx := context.Background()
 	fsc := createClient(ctx)
 	defer fsc.Close()
-	titlesByCreator, err := titlesByCreatorForAge(ctx, fsc, age())
+	titlesByCreator, err := titlesByCreatorForAgeWithTag(ctx, fsc, age(), tag())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,9 +48,9 @@ type titles struct {
 	illustrated, wrote []string
 }
 
-func titlesByCreatorForAge(ctx context.Context, fsc *firestore.Client, age int) (map[string]titles, error) {
+func titlesByCreatorForAgeWithTag(ctx context.Context, fsc *firestore.Client, age int, tag string) (map[string]titles, error) {
 	titlesByCreator := map[string]titles{}
-	books := fsc.Collection("books").Where("MinAge", "<=", age).Documents(ctx)
+	books := fsc.Collection("books").Where("MinAge", "<=", age).Where("Tags", "array-contains", tag).Documents(ctx)
 	for {
 		bSnap, err := books.Next()
 		if err == iterator.Done {
@@ -91,6 +91,14 @@ func age() int {
 		return age
 	}
 	return defaultAge
+}
+
+func tag() string {
+	const defaultTag = "melanated"
+	if len(os.Args) < 3 {
+		return defaultTag
+	}
+	return os.Args[2]
 }
 
 type Book struct {
