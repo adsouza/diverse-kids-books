@@ -5,8 +5,8 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-        "log"
-        "os"
+	"log"
+	"os"
 	"strconv"
 	"strings"
 
@@ -34,7 +34,7 @@ func main() {
 			log.Fatal(err)
 		}
 		b := Book{
-			Title: row[0],
+			Title:   row[0],
 			Authors: importCreators(ctx, fsc, row[1]),
 		}
 		if len(row[2]) > 0 {
@@ -83,7 +83,7 @@ func importCreators(ctx context.Context, fsc *firestore.Client, names string) []
 	var people []string
 	for _, c := range creators {
 		if !strings.Contains(c, " & ") {
-			people  = append(people, c)
+			people = append(people, c)
 			continue
 		}
 		// Handle pairs of creators (typically family) who share a last name.
@@ -115,17 +115,17 @@ type Creator struct {
 }
 
 type Book struct {
-	Title string
+	Title                 string
 	Authors, Illustrators []*firestore.DocumentRef
-	MinAge, MaxAge int
-	Tags []string
+	MinAge, MaxAge        int
+	Tags                  []string
 }
 
 func createClient(ctx context.Context) *firestore.Client {
-        const projectID = "diverse-kids-books"
-        client, err := firestore.NewClient(ctx, projectID)
-        if err != nil {
-                log.Fatalf("Failed to create client: %v", err)
-        }
-        return client
+	const projectID = "diverse-kids-books"
+	client, err := firestore.NewClient(ctx, projectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+	return client
 }

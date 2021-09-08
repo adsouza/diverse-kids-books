@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-        "log"
-        "net/http"
-        "os"
+	"html/template"
+	"log"
+	"net/http"
+	"os"
 	"strconv"
 	"strings"
-	"html/template"
 
-	"google.golang.org/api/iterator"
 	"cloud.google.com/go/firestore"
+	"google.golang.org/api/iterator"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 			continue
 		}
 		fmt.Printf("%s:\n\t%s\n", c, strings.Join(titles.wrote, "\n\t"))
-		n+=len(titles.wrote)
+		n += len(titles.wrote)
 	}
 	fmt.Printf("Found a total of %d books.\n", n)
 
@@ -41,16 +41,16 @@ func main() {
 
 	// Start server.
 	port := os.Getenv("PORT")
-        if port == "" {
-                port = "8080"
-                log.Printf("Defaulting to port %s", port)
-        }
-        log.Printf("Listening on port %s", port)
+	if port == "" {
+		port = "8080"
+		log.Printf("Defaulting to port %s", port)
+	}
+	log.Printf("Listening on port %s", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
 type handler struct {
-	fsc *firestore.Client
+	fsc  *firestore.Client
 	tmpl *template.Template
 }
 
@@ -73,14 +73,21 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, err)
 		return
 	}
+	titlesByCreator, err := titlesByCreatorForAgeWithTag(ctx, fsc, age, tag())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, err)
+		return
+	}
 	books := bookList{
-		Age: age,
+		Age:    age,
+		Titles: titlesByCreator,
 	}
 	h.respond(w, &books)
 }
 
 type bookList struct {
-	Age int
+	Age    int
 	Titles map[string]titles
 }
 
@@ -142,21 +149,21 @@ func tag() string {
 }
 
 type Book struct {
-	Title string
+	Title                 string
 	Authors, Illustrators []*firestore.DocumentRef
-	MinAge, MaxAge int
+	MinAge, MaxAge        int
 }
 
 type Creator struct {
-	Name string
+	Name               string
 	illustrated, wrote []*Book
 }
 
 func createClient(ctx context.Context) *firestore.Client {
-        const projectID = "diverse-kids-books"
-        client, err := firestore.NewClient(ctx, projectID)
-        if err != nil {
-                log.Fatalf("Failed to create client: %v", err)
-        }
-        return client
+	const projectID = "diverse-kids-books"
+	client, err := firestore.NewClient(ctx, projectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+	return client
 }
