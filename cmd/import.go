@@ -67,14 +67,10 @@ func tagsFromAppearance(a string) []string {
 		return []string{"east-asian"}
 	case "dark":
 		return []string{"melanated"}
-	case "diverse":
-		return []string{"diverse"}
-	case "indigenous":
-		return []string{"indigenous"}
+	case "diverse", "indigenous", "pale":
+		return []string{a}
 	case "non-human":
 		return []string{}
-	case "pale":
-		return []string{"pale"}
 	default:
 		log.Printf("Unsupported appearance type: %s.", a)
 	}
