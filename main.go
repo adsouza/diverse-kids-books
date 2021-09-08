@@ -17,18 +17,18 @@ func main() {
 	ctx := context.Background()
 	fsc := createClient(ctx)
 	defer fsc.Close()
-	titlesByIllustrator, err := booksByIllustratorForAge(ctx, fsc, age())
+	titlesByCreator, err := titlesByCreatorForAge(ctx, fsc, age())
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Illustrators & their books:\n---------------------------")
+	fmt.Println("Authors & their books:\n---------------------------")
 	var n int
-	for c, titles := range titlesByIllustrator {
-		if len(titles) == 0 {
+	for c, titles := range titlesByCreator {
+		if len(titles.wrote) == 0 {
 			continue
 		}
-		fmt.Printf("%s:\n\t%s\n", c, strings.Join(titles, "\n\t"))
-		n+=len(titles)
+		fmt.Printf("%s:\n\t%s\n", c, strings.Join(titles.wrote, "\n\t"))
+		n+=len(titles.wrote)
 	}
 	fmt.Printf("Found a total of %d books.\n", n)
 
@@ -44,21 +44,12 @@ func main() {
         }
 }
 
-func booksByIllustratorForAge(ctx context.Context, fsc *firestore.Client, age int) (map[string][]string, error) {
-	titlesByIllustrator := map[string][]string{}
-	creators := fsc.Collection("creators").Documents(ctx)
-	for {
-		cSnap, err := creators.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, fmt.Errorf("failed to iterate over creators: %v", err)
-		}
-		var c Creator
-		cSnap.DataTo(&c)
-		titlesByIllustrator[c.Name] = []string{}
-	}
+type titles struct {
+	illustrated, wrote []string
+}
+
+func titlesByCreatorForAge(ctx context.Context, fsc *firestore.Client, age int) (map[string]titles, error) {
+	titlesByCreator := map[string]titles{}
 	books := fsc.Collection("books").Where("MinAge", "<=", age).Documents(ctx)
 	for {
 		bSnap, err := books.Next()
@@ -66,7 +57,7 @@ func booksByIllustratorForAge(ctx context.Context, fsc *firestore.Client, age in
 			break
 		}
 		if err != nil {
-			return titlesByIllustrator, fmt.Errorf("failed to iterate over books: %v", err)
+			return titlesByCreator, fmt.Errorf("failed to iterate over books: %v", err)
 		}
 		var b Book
 		bSnap.DataTo(&b)
@@ -75,10 +66,17 @@ func booksByIllustratorForAge(ctx context.Context, fsc *firestore.Client, age in
 			continue
 		}
 		for _, i := range b.Illustrators {
-			titlesByIllustrator[i.ID] = append(titlesByIllustrator[i.ID], b.Title)
+			t := titlesByCreator[i.ID]
+			t.illustrated = append(t.illustrated, b.Title)
+			titlesByCreator[i.ID] = t
+		}
+		for _, i := range b.Authors {
+			t := titlesByCreator[i.ID]
+			t.wrote = append(t.wrote, b.Title)
+			titlesByCreator[i.ID] = t
 		}
 	}
-	return titlesByIllustrator, nil
+	return titlesByCreator, nil
 }
 
 func age() int {
@@ -103,7 +101,7 @@ type Book struct {
 
 type Creator struct {
 	Name string
-	books []*Book
+	illustrated, wrote []*Book
 }
 
 func createClient(ctx context.Context) *firestore.Client {
