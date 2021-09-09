@@ -27,11 +27,11 @@ func main() {
 	fmt.Println("Authors & their books:\n---------------------------")
 	var n int
 	for c, titles := range titlesByCreator {
-		if len(titles.wrote) == 0 {
+		if len(titles.Wrote) == 0 {
 			continue
 		}
-		fmt.Printf("%s:\n\t%s\n", c, strings.Join(titles.wrote, "\n\t"))
-		n += len(titles.wrote)
+		fmt.Printf("%s:\n\t%s\n", c, strings.Join(titles.Wrote, "\n\t"))
+		n += len(titles.Wrote)
 	}
 	fmt.Printf("Found a total of %d books.\n", n)
 
@@ -62,6 +62,7 @@ func (h *handler) respond(w http.ResponseWriter, d *bookList) {
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	ageStr := r.FormValue("age")
 	if ageStr == "" {
 		h.respond(w, nil)
@@ -73,7 +74,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, err)
 		return
 	}
-	titlesByCreator, err := titlesByCreatorForAgeWithTag(ctx, fsc, age, tag())
+	titlesByCreator, err := titlesByCreatorForAgeWithTag(ctx, h.fsc, age, tag())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintln(w, err)
@@ -92,7 +93,7 @@ type bookList struct {
 }
 
 type titles struct {
-	illustrated, wrote []string
+	Illustrated, Wrote []string
 }
 
 func titlesByCreatorForAgeWithTag(ctx context.Context, fsc *firestore.Client, age int, tag string) (map[string]titles, error) {
@@ -114,12 +115,12 @@ func titlesByCreatorForAgeWithTag(ctx context.Context, fsc *firestore.Client, ag
 		}
 		for _, i := range b.Illustrators {
 			t := titlesByCreator[i.ID]
-			t.illustrated = append(t.illustrated, b.Title)
+			t.Illustrated = append(t.Illustrated, b.Title)
 			titlesByCreator[i.ID] = t
 		}
 		for _, i := range b.Authors {
 			t := titlesByCreator[i.ID]
-			t.wrote = append(t.wrote, b.Title)
+			t.Wrote = append(t.Wrote, b.Title)
 			titlesByCreator[i.ID] = t
 		}
 	}
