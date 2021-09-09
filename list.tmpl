@@ -5,7 +5,7 @@
 		{{if $titles.Wrote}}
 		<h2>{{$creator}}</h2>
 			<ul>{{range $titles.Wrote}}
-				<li>{{.}}</li>
+				<li><a href="https://www.google.com/search?lr=lang_en&tbo=p&tbm=bks&q=intitle:%22{{.}}%22+inauthor:%22{{$creator}}%22&tbs=,bkt:b">{{.}}</a></li>
 			{{end}}</ul>
 		{{end}}
 	{{end}}
