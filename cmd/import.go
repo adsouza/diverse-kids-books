@@ -36,22 +36,23 @@ func main() {
 		b := Book{
 			Title:   row[0],
 			Authors: importCreators(ctx, fsc, row[1]),
+			Level:   row[3],
 		}
 		if len(row[2]) > 0 {
 			b.Illustrators = importCreators(ctx, fsc, row[2])
 		}
-		if len(row[3]) > 0 {
-			if b.MinAge, err = strconv.Atoi(row[3]); err != nil {
-				log.Fatal(err)
-			}
-		}
 		if len(row[4]) > 0 {
-			if b.MaxAge, err = strconv.Atoi(row[4]); err != nil {
+			if b.MinAge, err = strconv.Atoi(row[4]); err != nil {
 				log.Fatal(err)
 			}
 		}
 		if len(row[5]) > 0 {
-			b.Tags = tagsFromAppearance(row[5])
+			if b.MaxAge, err = strconv.Atoi(row[5]); err != nil {
+				log.Fatal(err)
+			}
+		}
+		if len(row[6]) > 0 {
+			b.Tags = tagsFromAppearance(row[6])
 		}
 		if _, err := fsc.Collection("books").Doc(fmt.Sprintf("%s by %s", b.Title, row[1])).Set(ctx, b); err != nil {
 			log.Fatal(err)
@@ -115,7 +116,7 @@ type Creator struct {
 }
 
 type Book struct {
-	Title                 string
+	Title, Level          string
 	Authors, Illustrators []*firestore.DocumentRef
 	MinAge, MaxAge        int
 	Tags                  []string

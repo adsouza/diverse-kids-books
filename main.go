@@ -38,6 +38,8 @@ func main() {
 	// Load HTML templates & configure HTTP request handler.
 	tmpl := template.Must(template.ParseGlob("*.tmpl"))
 	http.Handle("/", &handler{fsc: fsc, tmpl: tmpl})
+	// Serve static files.
+	http.Handle("/static/", http.FileServer(http.Dir(".")))
 
 	// Start server.
 	port := os.Getenv("PORT")
@@ -150,7 +152,7 @@ func tag() string {
 }
 
 type Book struct {
-	Title                 string
+	Title, Level          string
 	Authors, Illustrators []*firestore.DocumentRef
 	MinAge, MaxAge        int
 }
