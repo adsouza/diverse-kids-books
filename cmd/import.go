@@ -36,7 +36,7 @@ func main() {
 		b := Book{
 			Title:   row[0],
 			Authors: importCreators(ctx, fsc, row[1]),
-			Level:   row[3],
+			Category:   row[3],
 		}
 		if len(row[2]) > 0 {
 			b.Illustrators = importCreators(ctx, fsc, row[2])
@@ -116,7 +116,7 @@ type Creator struct {
 }
 
 type Book struct {
-	Title, Level          string
+	Title, Category          string
 	Authors, Illustrators []*firestore.DocumentRef
 	MinAge, MaxAge        int
 	Tags                  []string

@@ -1,6 +1,6 @@
 {{define "List"}}
 <title>Books for Kids Aged {{.Age}}</title>
-	<h1>Book titles for kids aged {{.Age}}, organized by author</h1>
+	<h1>{{.Cat}} book titles for kids aged {{.Age}}, organized by author</h1>
 	{{range $creator, $titles := .Titles}}
 		{{if $titles.Wrote}}
 		<h2>{{$creator}}</h2>

@@ -20,7 +20,7 @@ func main() {
 	defer fsc.Close()
 
 	// Ensure that data can be loaded from Firestore & parsed.
-	titlesByCreator, err := titlesByCreatorForAgeWithTag(ctx, fsc, age(), tag())
+	titlesByCreator, err := titlesByCreatorForAgeInCategoryWithTag(ctx, fsc, age(), defaultCat(), tag())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -76,7 +76,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, err)
 		return
 	}
-	titlesByCreator, err := titlesByCreatorForAgeWithTag(ctx, h.fsc, age, tag())
+	cat := r.FormValue("cat")
+	if cat == "" {
+		cat = defaultCat()
+	}
+	titlesByCreator, err := titlesByCreatorForAgeInCategoryWithTag(ctx, h.fsc, age, cat, tag())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintln(w, err)
@@ -84,6 +88,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	books := bookList{
 		Age:    age,
+		Cat: expand(cat),
 		Titles: titlesByCreator,
 	}
 	h.respond(w, &books)
@@ -91,6 +96,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type bookList struct {
 	Age    int
+	Cat string
 	Titles map[string]titles
 }
 
@@ -98,9 +104,24 @@ type titles struct {
 	Illustrated, Wrote []string
 }
 
-func titlesByCreatorForAgeWithTag(ctx context.Context, fsc *firestore.Client, age int, tag string) (map[string]titles, error) {
+func expand(s string) string {
+	switch s {
+	case "ER":
+		return "Early reader"
+	case "MG":
+		return "Middle-grade"
+	case "GN":
+		return "Graphic novel"
+	case "YA":
+		return "Young adult"
+	default:
+		return s
+	}
+}
+
+func titlesByCreatorForAgeInCategoryWithTag(ctx context.Context, fsc *firestore.Client, age int, cat, tag string) (map[string]titles, error) {
 	titlesByCreator := map[string]titles{}
-	books := fsc.Collection("books").Where("MinAge", "<=", age).Where("Tags", "array-contains", tag).Documents(ctx)
+	books := fsc.Collection("books").Where("Category", "==", cat).Where("MinAge", "<=", age).Where("Tags", "array-contains", tag).Documents(ctx)
 	for {
 		bSnap, err := books.Next()
 		if err == iterator.Done {
@@ -143,16 +164,24 @@ func age() int {
 	return defaultAge
 }
 
-func tag() string {
-	const defaultTag = "melanated"
+func defaultCat() string {
+	const defaultCat = "Chapter"
 	if len(os.Args) < 3 {
-		return defaultTag
+		return defaultCat
 	}
 	return os.Args[2]
 }
 
+func tag() string {
+	const defaultTag = "melanated"
+	if len(os.Args) < 4 {
+		return defaultTag
+	}
+	return os.Args[3]
+}
+
 type Book struct {
-	Title, Level          string
+	Title, Category string
 	Authors, Illustrators []*firestore.DocumentRef
 	MinAge, MaxAge        int
 }
