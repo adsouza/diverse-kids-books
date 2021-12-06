@@ -4,10 +4,20 @@
 <div style="width:max-content; margin:auto;">
 	<h1>Diverse Kids Books</h1>
 	<form action="/" method="GET">
-		<label for="age_range">Target age:</label>
+		<p><label for="age_range">Target age:</label>
 		<output id="selected_age">6</output><br/>
-		1<input type="range" name="age" id="age_range" min="1" max="12" value="6">12
-		<br/><button type="submit">Show me books!</button>
+		1<input type="range" name="age" id="age_range" min="1" max="12" value="6">12</p>
+		<p><label for="category">Category:</label>
+		<select name="cat" id="categories">
+			<option value="Board">Board</option>
+			<option value="Picture">Picture</option>
+			<option value="ER" selected>Early reader</option>
+			<option value="Chapter">Chapter</option>
+			<option value="GN">Graphic novel</option>
+			<option value="MG">Middle-grade</option>
+			<option value="YA">Young adult</option>
+		</select></p>
+		<p><button type="submit">Show me books!</button></p>
 	</form>
 </div>
 <script src="/static/interaction.js"></script>
